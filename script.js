@@ -468,8 +468,8 @@ function updateBracketLayout() {
     }
 
     if (roundIndex === 0) {
+      roundElement.style.setProperty("--round-gap", `${baseGap}px`);
       roundElement.style.removeProperty("--round-offset");
-      roundElement.style.removeProperty("--round-gap");
       return;
     }
 
