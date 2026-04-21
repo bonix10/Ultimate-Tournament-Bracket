@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ultimate Bracket</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy panel-sunset">
+          <div class="wave-ribbon" aria-hidden="true">
+            <span class="wave wave-base"></span>
+            <span class="wave wave-mid"></span>
+            <span class="wave wave-top"></span>
+          </div>
+          <p class="eyebrow">Single-elimination tournament builder</p>
+          <h1>Ultimate Bracket</h1>
+          <p class="hero-text">
+            Choose between 3 and 1024 teams, enter names separated by commas,
+            and advance winners interactively until a champion is crowned. Teams
+            are seeded in the exact order you list them.
+          </p>
+        </div>
+        <div class="hero-card panel-sky">
+          <div class="wave-ribbon" aria-hidden="true">
+            <span class="wave wave-base"></span>
+            <span class="wave wave-mid"></span>
+            <span class="wave wave-top"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Bracket range</span>
+            <strong>3-1024 teams</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Input format</span>
+            <strong>Comma-separated teams</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Winner flow</span>
+            <strong>Click to advance each matchup</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Seeding</span>
+            <strong>Listed order, with top seeds earning byes</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="stage-stack">
+        <section id="setup-view" class="panel stage-panel panel-sunset-soft">
+          <div class="wave-ribbon" aria-hidden="true">
+            <span class="wave wave-base"></span>
+            <span class="wave wave-mid"></span>
+            <span class="wave wave-top"></span>
+          </div>
+          <div class="panel-heading">
+            <p class="section-kicker">Step 1</p>
+            <h2>Enter teams</h2>
+            <p class="panel-text">
+              Pick a team count, then enter exactly that many team names,
+              separated with commas. The first team listed is seed 1, the
+              second is seed 2, and so on.
+            </p>
+          </div>
+
+          <form id="bracket-form" class="controls" novalidate>
+            <label class="field">
+              <span class="field-label">Number of teams</span>
+              <div class="size-controls">
+                <input
+                  id="team-count-range"
+                  type="range"
+                  min="3"
+                  max="1024"
+                  value="16"
+                />
+                <input
+                  id="team-count-input"
+                  type="number"
+                  min="3"
+                  max="1024"
+                  value="16"
+                  inputmode="numeric"
+                />
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Teams</span>
+              <textarea
+                id="teams-input"
+                rows="11"
+                placeholder="Team 1, Team 2, Team 3, Team 4"
+              >Team 1, Team 2, Team 3, Team 4, Team 5, Team 6, Team 7, Team 8, Team 9, Team 10, Team 11, Team 12, Team 13, Team 14, Team 15, Team 16</textarea>
+            </label>
+
+            <div class="helper-row">
+              <p id="team-counter" class="helper-text">16 teams detected.</p>
+              <button type="button" id="fill-demo" class="ghost-button">
+                Fill demo teams
+              </button>
+            </div>
+
+            <button type="submit" class="primary-button">Create bracket</button>
+            <p id="form-message" class="form-message" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section id="bracket-view" class="panel stage-panel panel-green hidden" aria-live="polite">
+          <div class="wave-ribbon" aria-hidden="true">
+            <span class="wave wave-base"></span>
+            <span class="wave wave-mid"></span>
+            <span class="wave wave-top"></span>
+          </div>
+          <div class="panel-heading panel-heading-inline">
+            <div>
+              <p class="section-kicker">Step 2</p>
+              <h2>Play the bracket</h2>
+              <p class="panel-text">
+                Click a team in each matchup to advance it. Losing teams fade
+                and strike through automatically.
+              </p>
+            </div>
+            <button type="button" id="edit-bracket" class="ghost-button">
+              Edit teams
+            </button>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-card">
+              <span>Teams entered</span>
+              <strong id="summary-teams">16</strong>
+            </div>
+            <div class="summary-card">
+              <span>First-round byes</span>
+              <strong id="summary-byes">0</strong>
+            </div>
+            <div class="summary-card">
+              <span>Total rounds</span>
+              <strong id="summary-rounds">4</strong>
+            </div>
+            <div class="summary-card">
+              <span>Round 1 matchups</span>
+              <strong id="summary-matchups">8</strong>
+            </div>
+            <div class="summary-card">
+              <span>Live selections</span>
+              <strong id="summary-decided">0</strong>
+            </div>
+            <div class="summary-card">
+              <span>Champion</span>
+              <strong id="summary-champion">TBD</strong>
+            </div>
+          </div>
+
+          <div id="champion-banner" class="champion-banner hidden"></div>
+          <div id="bracket" class="bracket"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="confetti-layer" class="confetti-layer" aria-hidden="true"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
