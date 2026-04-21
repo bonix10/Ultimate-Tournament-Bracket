@@ -19,6 +19,8 @@ const summaryMatchups = document.querySelector("#summary-matchups");
 const summaryDecided = document.querySelector("#summary-decided");
 const summaryChampion = document.querySelector("#summary-champion");
 
+const MAX_TEAMS = 512;
+
 let bracketState = null;
 let confettiBurstShown = false;
 let lastChampionLabel = null;
@@ -29,7 +31,7 @@ function clampTeamCount(value) {
     return 3;
   }
 
-  return Math.min(1024, Math.max(3, number));
+  return Math.min(MAX_TEAMS, Math.max(3, number));
 }
 
 function parseTeams(input) {
@@ -136,7 +138,7 @@ function buildBracketState(teams) {
 
   const baseSize = highestPowerOfTwoAtMost(seededTeams.length);
   const playInMatchCount = seededTeams.length - baseSize;
-  const byeCount = playInMatchCount;
+  const byeCount = playInMatchCount === 0 ? 0 : seededTeams.length - playInMatchCount * 2;
   const rounds = [];
 
   if (playInMatchCount === 0) {
@@ -172,7 +174,7 @@ function buildBracketState(teams) {
       currentSize /= 2;
     }
   } else {
-    const protectedSeedCutoff = baseSize - playInMatchCount;
+    const protectedSeedCutoff = byeCount;
     const mainSeeds = seedOrder(baseSize);
     const mainRoundEntries = mainSeeds.map((seed) =>
       seed <= protectedSeedCutoff ? createEntry(seededTeams[seed - 1]) : createPlaceholder()
@@ -399,25 +401,6 @@ function renderSeedButton(match, sideIndex) {
   `;
 }
 
-function renderConnectors(roundIndex, roundCount, matchIndex) {
-  const parts = [];
-
-  if (roundIndex > 0) {
-    parts.push('<span class="match-connector connector-left" aria-hidden="true"></span>');
-  }
-
-  if (roundIndex < roundCount - 1) {
-    parts.push('<span class="match-connector connector-right" aria-hidden="true"></span>');
-    parts.push(
-      `<span class="match-connector connector-branch ${
-        matchIndex % 2 === 0 ? "connector-branch-down" : "connector-branch-up"
-      }" aria-hidden="true"></span>`
-    );
-  }
-
-  return parts.join("");
-}
-
 function getMatchNote(match) {
   const [top, bottom] = match.sides;
 
@@ -434,6 +417,81 @@ function getMatchNote(match) {
   }
 
   return "Choose a winner";
+}
+
+function ensureBracketLinesLayer() {
+  let svg = bracketRoot.querySelector(".bracket-lines");
+  if (svg) {
+    return svg;
+  }
+
+  svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("bracket-lines");
+  svg.setAttribute("aria-hidden", "true");
+  bracketRoot.prepend(svg);
+  return svg;
+}
+
+function drawBracketLines() {
+  if (!bracketState) {
+    return;
+  }
+
+  const svg = ensureBracketLinesLayer();
+  const bracketRect = bracketRoot.getBoundingClientRect();
+  const width = Math.ceil(bracketRoot.scrollWidth);
+  const height = Math.ceil(bracketRoot.scrollHeight);
+
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.innerHTML = "";
+
+  const lineColor = "rgba(25, 143, 118, 0.42)";
+  const lineWidth = 3;
+
+  bracketState.rounds.forEach((round, roundIndex) => {
+    if (roundIndex >= bracketState.rounds.length - 1) {
+      return;
+    }
+
+    round.forEach((match) => {
+      if (match.nextMatchIndex === null) {
+        return;
+      }
+
+      const currentElement = bracketRoot.querySelector(
+        `.match[data-round-index="${roundIndex}"][data-match-index="${match.matchIndex}"]`
+      );
+      const nextElement = bracketRoot.querySelector(
+        `.match[data-round-index="${roundIndex + 1}"][data-match-index="${match.nextMatchIndex}"]`
+      );
+
+      if (!currentElement || !nextElement) {
+        return;
+      }
+
+      const currentRect = currentElement.getBoundingClientRect();
+      const nextRect = nextElement.getBoundingClientRect();
+      const startX = currentRect.right - bracketRect.left;
+      const startY = currentRect.top - bracketRect.top + currentRect.height / 2;
+      const endX = nextRect.left - bracketRect.left;
+      const endY = nextRect.top - bracketRect.top + nextRect.height / 2;
+      const midX = startX + (endX - startX) / 2;
+
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute(
+        "d",
+        `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`
+      );
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", lineColor);
+      path.setAttribute("stroke-width", String(lineWidth));
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      svg.append(path);
+    });
+  });
 }
 
 function updateBracketLayout() {
@@ -480,6 +538,8 @@ function updateBracketLayout() {
     roundElement.style.setProperty("--round-offset", `${offset}px`);
     roundElement.style.setProperty("--round-gap", `${gap}px`);
   });
+
+  drawBracketLines();
 }
 
 function renderBracket() {
@@ -499,8 +559,11 @@ function renderBracket() {
             ${round
               .map(
                 (match) => `
-                  <article class="match">
-                    ${renderConnectors(roundIndex, roundCount, match.matchIndex)}
+                  <article
+                    class="match"
+                    data-round-index="${roundIndex}"
+                    data-match-index="${match.matchIndex}"
+                  >
                     <div class="match-head">
                       <strong>Match ${match.matchIndex + 1}</strong>
                       <span class="match-note">${getMatchNote(match)}</span>
