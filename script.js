@@ -136,77 +136,103 @@ function buildBracketState(teams) {
 
   const baseSize = highestPowerOfTwoAtMost(seededTeams.length);
   const playInMatchCount = seededTeams.length - baseSize;
-  const byeCount = playInMatchCount === 0 ? 0 : seededTeams.length - playInMatchCount * 2;
+  const byeCount = playInMatchCount;
   const rounds = [];
 
-  let currentRoundEntries;
-  let currentSize;
-
   if (playInMatchCount === 0) {
-    currentRoundEntries = seedOrder(seededTeams.length).map((seed) =>
+    let currentRoundEntries = seedOrder(seededTeams.length).map((seed) =>
       createEntry(seededTeams[seed - 1])
     );
-    currentSize = currentRoundEntries.length;
-  } else {
-    const firstRoundOrder = seedOrder(baseSize);
-    const firstRoundMatches = [];
-    const nextEntries = new Array(baseSize).fill(null).map(() => createPlaceholder());
+    let currentSize = currentRoundEntries.length;
 
-    firstRoundOrder.forEach((seedNumber, slotIndex) => {
-      const top = createEntry(seededTeams[seedNumber - 1]);
-      let bottom = createPlaceholder();
-      let winnerSide = null;
+    while (currentSize >= 2) {
+      const roundIndex = rounds.length;
+      const matches = [];
+      const nextEntries = new Array(currentSize / 2).fill(null).map(() => createPlaceholder());
 
-      if (seedNumber <= byeCount) {
-        bottom = createEntry(null);
-        winnerSide = 0;
-        nextEntries[slotIndex] = { ...top };
-      } else {
-        const opponentSeed =
-          seededTeams.length - (seedNumber - (byeCount + 1));
-        bottom = createEntry(seededTeams[opponentSeed - 1]);
+      for (let index = 0; index < currentRoundEntries.length; index += 2) {
+        const slot = index / 2;
+        const top = currentRoundEntries[index];
+        const bottom = currentRoundEntries[index + 1];
+
+        matches.push({
+          id: `r${roundIndex}-m${slot}`,
+          roundIndex,
+          matchIndex: slot,
+          sides: [top, bottom],
+          initialSides: [cloneEntry(top), cloneEntry(bottom)],
+          winnerSide: null,
+          nextMatchIndex: currentSize > 2 ? Math.floor(slot / 2) : null,
+          nextSideIndex: currentSize > 2 ? slot % 2 : null,
+        });
       }
 
-      firstRoundMatches.push({
-        id: `r0-m${slotIndex}`,
+      rounds.push(matches);
+      currentRoundEntries = nextEntries;
+      currentSize /= 2;
+    }
+  } else {
+    const protectedSeedCutoff = baseSize - playInMatchCount;
+    const mainSeeds = seedOrder(baseSize);
+    const mainRoundEntries = mainSeeds.map((seed) =>
+      seed <= protectedSeedCutoff ? createEntry(seededTeams[seed - 1]) : createPlaceholder()
+    );
+    const playInMatches = [];
+
+    for (let index = 0; index < playInMatchCount; index += 1) {
+      const seededPlayInSeed = baseSize - index;
+      const extraSeed = baseSize + 1 + index;
+      const targetSlotIndex = mainSeeds.indexOf(seededPlayInSeed);
+
+      playInMatches.push({
+        id: `r0-m${index}`,
         roundIndex: 0,
-        matchIndex: slotIndex,
-        sides: [top, bottom],
-        winnerSide,
-        nextMatchIndex: Math.floor(slotIndex / 2),
-        nextSideIndex: slotIndex % 2,
-      });
-    });
-
-    rounds.push(firstRoundMatches);
-    currentRoundEntries = nextEntries;
-    currentSize = nextEntries.length;
-  }
-
-  while (currentSize >= 2) {
-    const roundIndex = rounds.length;
-    const matches = [];
-    const nextEntries = new Array(currentSize / 2).fill(null).map(() => createPlaceholder());
-
-    for (let index = 0; index < currentRoundEntries.length; index += 2) {
-      const slot = index / 2;
-      const top = currentRoundEntries[index];
-      const bottom = currentRoundEntries[index + 1];
-
-      matches.push({
-        id: `r${roundIndex}-m${slot}`,
-        roundIndex,
-        matchIndex: slot,
-        sides: [top, bottom],
+        matchIndex: index,
+        sides: [
+          createEntry(seededTeams[seededPlayInSeed - 1]),
+          createEntry(seededTeams[extraSeed - 1]),
+        ],
+        initialSides: [
+          createEntry(seededTeams[seededPlayInSeed - 1]),
+          createEntry(seededTeams[extraSeed - 1]),
+        ],
         winnerSide: null,
-        nextMatchIndex: currentSize > 2 ? Math.floor(slot / 2) : null,
-        nextSideIndex: currentSize > 2 ? slot % 2 : null,
+        nextMatchIndex: Math.floor(targetSlotIndex / 2),
+        nextSideIndex: targetSlotIndex % 2,
       });
     }
 
-    rounds.push(matches);
-    currentRoundEntries = nextEntries;
-    currentSize /= 2;
+    rounds.push(playInMatches);
+
+    let currentRoundEntries = mainRoundEntries;
+    let currentSize = currentRoundEntries.length;
+
+    while (currentSize >= 2) {
+      const roundIndex = rounds.length;
+      const matches = [];
+      const nextEntries = new Array(currentSize / 2).fill(null).map(() => createPlaceholder());
+
+      for (let index = 0; index < currentRoundEntries.length; index += 2) {
+        const slot = index / 2;
+        const top = currentRoundEntries[index];
+        const bottom = currentRoundEntries[index + 1];
+
+        matches.push({
+          id: `r${roundIndex}-m${slot}`,
+          roundIndex,
+          matchIndex: slot,
+          sides: [top, bottom],
+          initialSides: [cloneEntry(top), cloneEntry(bottom)],
+          winnerSide: null,
+          nextMatchIndex: currentSize > 2 ? Math.floor(slot / 2) : null,
+          nextSideIndex: currentSize > 2 ? slot % 2 : null,
+        });
+      }
+
+      rounds.push(matches);
+      currentRoundEntries = nextEntries;
+      currentSize /= 2;
+    }
   }
 
   const state = {
@@ -229,7 +255,7 @@ function propagateWinners(state) {
 
   for (let roundIndex = 1; roundIndex < state.rounds.length; roundIndex += 1) {
     state.rounds[roundIndex].forEach((match) => {
-      match.sides = [createPlaceholder(), createPlaceholder()];
+      match.sides = match.initialSides.map(cloneEntry);
       match.winnerSide = null;
     });
   }
@@ -253,11 +279,7 @@ function propagateWinners(state) {
       const [top, bottom] = match.sides;
       const previousMatch = previousRounds[roundIndex + 1][match.matchIndex];
 
-      if (top.type === "team" && bottom.type === "bye") {
-        match.winnerSide = 0;
-      } else if (bottom.type === "team" && top.type === "bye") {
-        match.winnerSide = 1;
-      } else if (
+      if (
         previousMatch &&
         entriesMatch(previousMatch.sides[0], top) &&
         entriesMatch(previousMatch.sides[1], bottom) &&
