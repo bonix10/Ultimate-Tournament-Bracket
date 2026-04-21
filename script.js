@@ -399,6 +399,25 @@ function renderSeedButton(match, sideIndex) {
   `;
 }
 
+function renderConnectors(roundIndex, roundCount, matchIndex) {
+  const parts = [];
+
+  if (roundIndex > 0) {
+    parts.push('<span class="match-connector connector-left" aria-hidden="true"></span>');
+  }
+
+  if (roundIndex < roundCount - 1) {
+    parts.push('<span class="match-connector connector-right" aria-hidden="true"></span>');
+    parts.push(
+      `<span class="match-connector connector-branch ${
+        matchIndex % 2 === 0 ? "connector-branch-down" : "connector-branch-up"
+      }" aria-hidden="true"></span>`
+    );
+  }
+
+  return parts.join("");
+}
+
 function getMatchNote(match) {
   const [top, bottom] = match.sides;
 
@@ -440,6 +459,8 @@ function updateBracketLayout() {
   );
   const step = baseMatchHeight + baseGap;
 
+  bracketRoot.style.setProperty("--match-height", `${baseMatchHeight}px`);
+
   roundElements.forEach((roundElement, roundIndex) => {
     const matchList = roundElement.querySelector(".match-list");
     if (!matchList) {
@@ -479,6 +500,7 @@ function renderBracket() {
               .map(
                 (match) => `
                   <article class="match">
+                    ${renderConnectors(roundIndex, roundCount, match.matchIndex)}
                     <div class="match-head">
                       <strong>Match ${match.matchIndex + 1}</strong>
                       <span class="match-note">${getMatchNote(match)}</span>
