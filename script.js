@@ -480,18 +480,24 @@ function drawBracketLines() {
       const nextElement = bracketRoot.querySelector(
         `.match[data-round-index="${roundIndex + 1}"][data-match-index="${match.nextMatchIndex}"]`
       );
+      const nextSeedElement = bracketRoot.querySelector(
+        `.match[data-round-index="${roundIndex + 1}"][data-match-index="${match.nextMatchIndex}"] ` +
+          `.seed-button[data-side-index="${match.nextSideIndex}"]`
+      );
 
-      if (!currentElement || !nextElement) {
+      if (!currentElement || !nextElement || !nextSeedElement) {
         return;
       }
 
       const currentRect = currentElement.getBoundingClientRect();
       const nextRect = nextElement.getBoundingClientRect();
+      const nextSeedRect = nextSeedElement.getBoundingClientRect();
       const startX = currentRect.right - bracketRect.left;
       const startY = currentRect.top - bracketRect.top + currentRect.height / 2;
-      const endX = nextRect.left - bracketRect.left;
-      const endY = nextRect.top - bracketRect.top + nextRect.height / 2;
-      const midX = startX + (endX - startX) / 2;
+      const endX = nextSeedRect.left - bracketRect.left;
+      const endY = nextSeedRect.top - bracketRect.top + nextSeedRect.height / 2;
+      const cardJoinX = nextRect.left - bracketRect.left;
+      const midX = startX + (cardJoinX - startX) / 2;
 
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute(
