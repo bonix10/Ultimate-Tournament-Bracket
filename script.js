@@ -24,6 +24,7 @@ const MAX_TEAMS = 512;
 let bracketState = null;
 let confettiBurstShown = false;
 let lastChampionLabel = null;
+let bracketLayoutFrame = null;
 
 function clampTeamCount(value) {
   const number = Number.parseInt(value, 10);
@@ -432,6 +433,19 @@ function ensureBracketLinesLayer() {
   return svg;
 }
 
+function scheduleBracketLayout() {
+  if (bracketLayoutFrame !== null) {
+    window.cancelAnimationFrame(bracketLayoutFrame);
+  }
+
+  bracketLayoutFrame = window.requestAnimationFrame(() => {
+    bracketLayoutFrame = window.requestAnimationFrame(() => {
+      bracketLayoutFrame = null;
+      updateBracketLayout();
+    });
+  });
+}
+
 function drawBracketLines() {
   if (!bracketState) {
     return;
@@ -447,7 +461,7 @@ function drawBracketLines() {
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.innerHTML = "";
 
-  const lineColor = "rgba(25, 143, 118, 0.42)";
+  const lineColor = "rgba(108, 113, 124, 0.48)";
   const lineWidth = 3;
 
   bracketState.rounds.forEach((round, roundIndex) => {
@@ -581,6 +595,7 @@ function renderBracket() {
     .join("");
 
   updateBracketLayout();
+  scheduleBracketLayout();
   updateSummary();
 }
 
@@ -713,7 +728,7 @@ bracketRoot.addEventListener("click", (event) => {
   );
 });
 
-window.addEventListener("resize", updateBracketLayout);
+window.addEventListener("resize", scheduleBracketLayout);
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
